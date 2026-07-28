@@ -1,0 +1,44 @@
+services:
+
+  db:
+    image: postgres:17-alpine
+    env_file: ../env/backend.env
+    ports:
+      - "5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend-db-network
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    env_file: ../env/backend.env
+    expose:
+      - "3000"
+    networks:
+      - frontend-backend-network
+      - backend-db-network
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "8080:80"
+    networks:
+      - frontend-backend-network
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+networks:
+  frontend-backend-network:
+    driver: bridge
+  backend-db-network:
+    driver: bridge
+    
