@@ -27,6 +27,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
+    env_file: ../env/frontend.env
     ports:
       - "8080:80"
     networks:
