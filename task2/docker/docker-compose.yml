@@ -1,15 +1,37 @@
 services:
 
-  db:
-    image: postgres:17-alpine
-    env_file: ../env/backend.env
+  proxy:
+    image: nginx:alpine
     ports:
-      - "5432"
+      - "8080:80"
+    environment:
+      FRONTEND_URL: http://frontend
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ../nginx/nginx-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro
     networks:
-      - backend-db-network
-
+      - proxy-frontend-network
+    depends_on:
+      frontend:
+        condition: service_healthy
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    env_file: ../env/frontend.env
+    environment:
+      FRONTEND_URL: http://frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - proxy-frontend-network
+      - frontend-backend-network
+    depends_on:
+      backend:
+        condition: service_healthy
   backend:
     build:
       context: ..
@@ -17,27 +39,39 @@ services:
     env_file: ../env/backend.env
     expose:
       - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - frontend-backend-network
       - backend-db-network
     depends_on:
-      - db
-
-  frontend:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.frontend
-    env_file: ../env/frontend.env
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:17-alpine
+    env_file: ../env/backend.env
     ports:
-      - "8080:80"
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     networks:
-      - frontend-backend-network
-    depends_on:
-      - backend
+      - backend-db-network
 
 volumes:
   pgdata:
 networks:
+  proxy-frontend-network:
+    driver: bridge
   frontend-backend-network:
     driver: bridge
   backend-db-network:
