@@ -111,7 +111,7 @@ app.post('/api/tasks', async (req, res) => {
     'INSERT INTO tasks (title, status) VALUES ($1, $2) RETURNING *',
     [title.trim(), 'pending']
   );
-  console.log(`[API] POST /api/tasks -> 201 task #${result.rows[0].id} created`);
+  console.log(`[API] POST /api/tasks -> 201 "${result.rows[0].title}" created`);
   res.status(201).json(result.rows[0]);
 });
 
