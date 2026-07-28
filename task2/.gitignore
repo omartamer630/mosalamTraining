@@ -1,0 +1,8 @@
+node_modules/
+
+# Env files with secrets
+env/backend.env
+env/frontend.env
+
+# Docker
+pgdata/
